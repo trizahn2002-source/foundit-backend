@@ -8,7 +8,62 @@ from config import db
 
 
 # ---------- categories and items (Samuel) ----------
+class Category(db.Model):
+    __tablename__ = "categories"
 
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), unique=True, nullable=False)
+
+    items = db.relationship("Item", back_populates="category")
+
+    def to_dict(self):
+        return {"id": self.id, "name": self.name}
+
+    def __repr__(self):
+        return f"<Category {self.id} {self.name}>"
+
+
+class Item(db.Model):
+    __tablename__ = "items"
+
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(120), nullable=False)
+    description = db.Column(db.Text)
+    type = db.Column(db.String(10), nullable=False)  # "lost" or "found"
+    status = db.Column(db.String(20), nullable=False, default="open")
+    location = db.Column(db.String(200))
+    latitude = db.Column(db.Float)
+    longitude = db.Column(db.Float)
+    date = db.Column(db.Date)
+    image_url = db.Column(db.String(500))
+    created_at = db.Column(db.DateTime, server_default=db.func.now())
+
+    category_id = db.Column(db.Integer, db.ForeignKey("categories.id"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+
+    category = db.relationship("Category", back_populates="items")
+    # No "claims" relationship here: Regan's Claim model creates Item.claims
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "title": self.title,
+            "description": self.description,
+            "type": self.type,
+            "status": self.status,
+            "location": self.location,
+            "latitude": self.latitude,
+            "longitude": self.longitude,
+            "date": self.date.isoformat() if self.date else None,
+            "image_url": self.image_url,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "category_id": self.category_id,
+            "category": self.category.name if self.category else None,
+            "user_id": self.user_id,
+        }
+
+    def __repr__(self):
+        return f"<Item {self.id} {self.title} ({self.type})>"
 
 # ---------- claims (Regan) ----------
 from sqlalchemy.orm import validates
