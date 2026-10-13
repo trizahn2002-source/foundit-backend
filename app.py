@@ -1,7 +1,7 @@
 from flask import jsonify
 from config import app
 import models  # loads the tables so migrations can find them
-
+import item_routes 
 
 @app.route("/api")
 def index():
