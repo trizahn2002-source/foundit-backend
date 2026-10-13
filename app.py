@@ -8,6 +8,7 @@ from dashboard import dashboard_bp
 app.register_blueprint(matches_bp)
 app.register_blueprint(dashboard_bp)
 
+import item_routes 
 
 @app.route("/api")
 def index():
