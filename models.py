@@ -1,4 +1,5 @@
 from config import db
+from sqlalchemy.orm import validates
 
 
 # Each person adds their model in their own section below.
@@ -30,7 +31,7 @@ class Item(db.Model):
     title = db.Column(db.String(120), nullable=False)
     description = db.Column(db.Text)
     type = db.Column(db.String(10), nullable=False)  # "lost" or "found"
-    status = db.Column(db.String(20), nullable=False, default="open")
+    status = db.Column(db.String(20), nullable=False, default="active")
     location = db.Column(db.String(200))
     latitude = db.Column(db.Float)
     longitude = db.Column(db.Float)
@@ -43,6 +44,23 @@ class Item(db.Model):
 
     category = db.relationship("Category", back_populates="items")
     # No "claims" relationship here: Regan's Claim model creates Item.claims
+    @validates("title")
+    def validate_title(self, key, value):
+        if not value or not value.strip():
+            raise ValueError("Item title is required.")
+        return value.strip()
+
+    @validates("type")
+    def validate_type(self, key, value):
+        if value not in ("lost", "found"):
+            raise ValueError("Type must be 'lost' or 'found'.")
+        return value
+
+    @validates("status")
+    def validate_status(self, key, value):
+        if value not in ("active", "claimed", "resolved"):
+            raise ValueError("Status must be active, claimed or resolved.")
+        return value
 
     def to_dict(self):
         return {
