@@ -175,3 +175,5 @@ class Claim(db.Model):
 
     def __repr__(self):
         return f"<Claim {self.id} user={self.user_id} item={self.item_id} {self.status}>"
+
+    
