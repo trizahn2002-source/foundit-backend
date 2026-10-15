@@ -57,7 +57,7 @@ class Category(db.Model):
         return {"id": self.id, "name": self.name}
 
     def __repr__(self):
-        return f"<Category {self.id} {self.name}>"
+        return f"<Category {self.id}  {self.name}>"
 
 
 class Item(db.Model):
@@ -72,7 +72,7 @@ class Item(db.Model):
     latitude = db.Column(db.Float)
     longitude = db.Column(db.Float)
     date = db.Column(db.Date)
-    image_url = db.Column(db.String(500))
+    image_url = db.Column(db.Text)
     created_at = db.Column(db.DateTime, server_default=db.func.now())
 
     category_id = db.Column(db.Integer, db.ForeignKey("categories.id"), nullable=False)

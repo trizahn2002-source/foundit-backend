@@ -7,7 +7,7 @@ ITEM_TYPES = {"lost", "found"}
 ITEM_STATUSES = {"active", "claimed", "resolved"}  # same list as the Item validator in models.py
 
 # field -> max length, for the text columns in models.py
-TEXT_LIMITS = {"title": 120, "status": 20, "location": 200, "image_url": 500}
+TEXT_LIMITS = {"title": 120, "status": 20, "location": 200}
 OPTIONAL_TEXT = ["description", "location", "image_url"]  # may be sent as null
 EDITABLE = ["title", "description", "type", "status", "location",
             "latitude", "longitude", "date", "image_url", "category_id"]
