@@ -57,7 +57,7 @@ class Category(db.Model):
         return {"id": self.id, "name": self.name}
 
     def __repr__(self):
-        return f"<Category {self.id} {self.name}>"
+        return f"<Category {self.id}  {self.name}>"
 
 
 class Item(db.Model):
