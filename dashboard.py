@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, session
 from models import Item, Claim, User
 from config import db
 
@@ -7,10 +7,15 @@ dashboard_bp = Blueprint("dashboard", __name__)
 
 @dashboard_bp.get("/api/users/<int:user_id>/items")
 def get_my_items(user_id):
-    user = db.session.get(User, user_id)
+    logged_in_user_id = session.get("user_id")
 
-    if user is None:
-        return jsonify({"error": "User not found"}), 404
+    if logged_in_user_id is None:
+        return jsonify({"error": "Login required"}), 401
+    
+    if logged_in_user_id != user_id:
+        return jsonify({"error": "You are not allowed to view another user's items"}), 403
+
+
     items = (
         Item.query
         .filter_by(user_id=user_id)
@@ -27,10 +32,14 @@ def get_my_items(user_id):
 
 @dashboard_bp.get("/api/users/<int:user_id>/claims")
 def get_my_claims(user_id):
-    user = db.session.get(User, user_id)
+    logged_in_user_id = session.get("user_id")
 
-    if user is None:
-        return jsonify({"error": "User not found"}), 404
+    if logged_in_user_id is None:
+        return jsonify({"error": "Login required"}), 401
+
+    if logged_in_user_id != user_id:
+        return jsonify({"error": "You are not allowed to view another user's claims"}), 403
+
     claims = (
         Claim.query
         .filter_by(user_id=user_id)
