@@ -8,6 +8,16 @@ import models  # Load all models for SQLAlchemy and migrations
 
 User = models.User
 
+from matches import matches_bp
+from dashboard import dashboard_bp
+from claims import claims_bp
+
+app.register_blueprint(matches_bp)
+app.register_blueprint(dashboard_bp)
+app.register_blueprint(claims_bp)
+
+import item_routes
+
 
 @app.route("/api")
 def index():
@@ -155,3 +165,4 @@ def check_session():
 
 if __name__ == "__main__":
     app.run(port=5555, debug=True)
+
