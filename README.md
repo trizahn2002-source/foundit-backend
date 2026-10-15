@@ -223,8 +223,8 @@ Stores claims submitted for found items including:
 
 - [Trizah Njeri](https://github.com/trizahn2002-source) — Scrum Master; Flask application setup, configuration, database setup, migrations, seed data, pull request merging and frontend–Flask integration
 - [Wesley Were](https://github.com/WesleyWanga) — Authentication and Users; User model, password hashing, signup, login, logout, session checking and Login/Register pages
-- [Samuel](https://github.com/kimz-art) — Items and Categories; Item and Category models, item creation/editing/deletion, search and filters, Home page and Report page
-- [Regan](https://github.com/toshregan94-hub) — Claims; Claim model, claim submission, approve/reject functionality, claim rules and claim form integration on Item Details
+- [Samuel Mwaura](https://github.com/kimz-art) — Items and Categories; Item and Category models, item creation/editing/deletion, search and filters, Home page and Report page
+- [Regan Njeru](https://github.com/toshregan94-hub) — Claims; Claim model, claim submission, approve/reject functionality, claim rules and claim form integration on Item Details
 - [Abigail Tandiwe](https://github.com/tandisimelane-15) — Matches, Dashboard and Testing; matching rules endpoint, My Items, My Claims, dashboard integration, error handling, Postman testing of backend endpoints and backend README
 
 ## How to Contribute
