@@ -79,6 +79,7 @@ class Item(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
 
     category = db.relationship("Category", back_populates="items")
+    user = db.relationship("User")
     # No "claims" relationship here: Regan's Claim model creates Item.claims
     @validates("title")
     def validate_title(self, key, value):
@@ -114,6 +115,7 @@ class Item(db.Model):
             "category_id": self.category_id,
             "category": self.category.name if self.category else None,
             "user_id": self.user_id,
+            "reporter_username": self.user.username if self.user else None,
         }
 
     def __repr__(self):
