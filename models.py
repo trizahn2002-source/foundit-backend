@@ -141,6 +141,11 @@ class Claim(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     message = db.Column(db.Text, nullable=False)
     status = db.Column(db.String(20), nullable=False, default="pending")
+    # Contact details voluntarily shared by the finder
+    # when approving an ownership claim.
+    contact_method = db.Column(db.String(20), nullable=True)
+    contact_detail = db.Column(db.String(255), nullable=True)
+
     created_at = db.Column(db.DateTime, nullable=False, server_default=db.func.now())
 
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
@@ -173,6 +178,7 @@ class Claim(db.Model):
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "user_id": self.user_id,
             "item_id": self.item_id,
+            "item_title": self.item.title if self.item else None,
         }
 
     def __repr__(self):
