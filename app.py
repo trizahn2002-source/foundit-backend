@@ -1,9 +1,12 @@
-
+import hashlib
+import hmac
 import os
-
+from rate_limiting import rate_limit
 from flask import jsonify, request, session
 from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
+from password_security import validate_password
+from password_recovery import password_recovery_bp
 
 from config import app, db
 import models  # Load all models for SQLAlchemy and migrations
@@ -15,6 +18,36 @@ from email_verification import (
 
 User = models.User
 
+# Invalidate old sessions when an account password changes.
+
+def authentication_stamp(user):
+    secret = app.config["SECRET_KEY"].encode("utf-8")
+    return hmac.new(
+        secret,
+        user.password_hash.encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+
+
+@app.before_request
+def validate_existing_session():
+    user_id = session.get("user_id")
+
+    if user_id is None:
+        return
+
+    user = db.session.get(User, user_id)
+
+    if (
+        user is None
+        or not hmac.compare_digest(
+            str(session.get("auth_stamp", "")),
+            authentication_stamp(user),
+        )
+    ):
+        session.clear()
+
+
 from matches import matches_bp
 from dashboard import dashboard_bp
 from claims import claims_bp
@@ -22,6 +55,7 @@ from claims import claims_bp
 app.register_blueprint(matches_bp)
 app.register_blueprint(dashboard_bp)
 app.register_blueprint(claims_bp)
+app.register_blueprint(password_recovery_bp)
 
 import item_routes
 
@@ -54,6 +88,7 @@ def get_json_data():
 
 
 @app.route("/api/register", methods=["POST"])
+@rate_limit("register", "email")
 def register():
     data = get_json_data()
 
@@ -92,9 +127,21 @@ def register():
             "error": "Enter a valid email address."
         }), 400
 
-    if len(password) < 8:
+    password_valid, password_message = validate_password(
+    password,
+    username,
+    email
+)
+
+    password_valid, password_message = validate_password(
+        password,
+        username,
+        email
+    )
+    
+    if not password_valid:
         return jsonify({
-            "error": "Password must be at least 8 characters long."
+            "error": password_message
         }), 400
 
     if not email_allowed_for_testing(email):
@@ -149,6 +196,7 @@ def register():
 
 
 @app.route("/api/verify-email", methods=["POST"])
+@rate_limit("verify_email", "email")
 def verify_email():
     data = get_json_data()
 
@@ -189,6 +237,7 @@ def verify_email():
     "/api/resend-verification",
     methods=["POST"]
 )
+@rate_limit("resend_verification", "email")
 def resend_verification():
     data = get_json_data()
 
@@ -235,6 +284,7 @@ def resend_verification():
 
 
 @app.route("/api/login", methods=["POST"])
+@rate_limit("login", "identifier")
 def login():
     data = get_json_data()
 
@@ -278,6 +328,7 @@ def login():
 
     session.clear()
     session["user_id"] = user.id
+    session["auth_stamp"] = authentication_stamp(user)
 
     return jsonify({
         "message": "Login successful.",

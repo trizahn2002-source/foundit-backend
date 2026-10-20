@@ -229,3 +229,88 @@ class EmailVerification(db.Model):
 
     def __repr__(self):
         return f"<EmailVerification user={self.user_id}>"
+
+
+
+# ---------- Authentication Rate Limiting ----------
+
+class RateLimitBucket(db.Model):
+    __tablename__ = "rate_limit_buckets"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    action = db.Column(
+        db.String(64),
+        nullable=False
+    )
+
+    key_hash = db.Column(
+        db.String(64),
+        nullable=False
+    )
+
+    hit_count = db.Column(
+        db.Integer,
+        nullable=False,
+        default=0
+    )
+
+    expires_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        index=True
+    )
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "action",
+            "key_hash",
+            name="uq_rate_limit_action_key"
+        ),
+    )
+
+    def __repr__(self):
+        return f"<RateLimitBucket {self.action}>"
+
+
+# ---------- Password Recovery ----------
+
+class PasswordResetToken(db.Model):
+    __tablename__ = "password_reset_tokens"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+
+    token_hash = db.Column(
+        db.String(64),
+        unique=True,
+        nullable=False
+    )
+
+    expires_at = db.Column(
+        db.DateTime,
+        nullable=False
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=db.func.now()
+    )
+
+    user = db.relationship(
+        "User",
+        backref=db.backref(
+            "password_reset_tokens",
+            cascade="all, delete-orphan"
+        )
+    )
+
+    def __repr__(self):
+        return f"<PasswordResetToken user={self.user_id}>"
