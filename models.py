@@ -15,6 +15,7 @@ class User(db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
+    email_verified_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(
         db.DateTime,
         nullable=False,
@@ -185,3 +186,46 @@ class Claim(db.Model):
         return f"<Claim {self.id} user={self.user_id} item={self.item_id} {self.status}>"
 
     
+# ---------- Email Verification ----------
+
+class EmailVerification(db.Model):
+    __tablename__ = "email_verifications"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+
+    code_hash = db.Column(db.String(256), nullable=False)
+
+    expires_at = db.Column(
+        db.DateTime,
+        nullable=False
+    )
+
+    attempts = db.Column(
+        db.Integer,
+        nullable=False,
+        default=0
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=db.func.now()
+    )
+
+    user = db.relationship(
+        "User",
+        backref=db.backref(
+            "email_verifications",
+            cascade="all, delete-orphan"
+        )
+    )
+
+    def __repr__(self):
+        return f"<EmailVerification user={self.user_id}>"
