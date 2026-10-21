@@ -11,9 +11,11 @@ User = models.User
 from matches import matches_bp
 from dashboard import dashboard_bp
 from claims import claims_bp
+from tips import tips_bp
 
 app.register_blueprint(matches_bp)
 app.register_blueprint(dashboard_bp)
+app.register_blueprint(tips_bp)
 app.register_blueprint(claims_bp)
 
 import item_routes
