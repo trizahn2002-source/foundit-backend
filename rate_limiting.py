@@ -25,6 +25,12 @@ from models import RateLimitBucket
 RATE_LIMIT_POLICIES = {
     "register": (5, 3600),
     "login": (10, 900),
+    "google_login": (10, 900),
+    "edit_profile": (12, 900),
+    "change_password": (5, 3600),
+    "delete_account": (5, 3600),
+    "login_verify_otp": (10, 300),
+    "login_resend_otp": (3, 3600),
     "verify_email": (5, 300),
     "resend_verification": (3, 3600),
     "request_password_reset": (3, 3600),

@@ -16,6 +16,36 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret-change-me")
 app.json.compact = False
 
+
+from datetime import timedelta
+
+# ---------- Session Security ----------
+
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+
+# Development uses HTTP localhost.
+# Production must use HTTPS.
+app.config["SESSION_COOKIE_SECURE"] = (
+    os.getenv("SESSION_COOKIE_SECURE", "false")
+    .lower() == "true"
+)
+
+# Use "Lax" when frontend/backend are same-site.
+# Cross-site production hosting may require "None"
+# together with SESSION_COOKIE_SECURE=True.
+app.config["SESSION_COOKIE_SAMESITE"] = os.getenv(
+    "SESSION_COOKIE_SAMESITE", "Lax"
+)
+
+# Session lifetime: 8 hours.
+app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(
+    hours=8
+)
+
+# Do not renew the cookie on every request.
+app.config["SESSION_REFRESH_EACH_REQUEST"] = False
+
+
 # Naming rules so migrations don't break on SQLite
 metadata = MetaData(naming_convention={
     "ix": "ix_%(column_0_label)s",

@@ -1,12 +1,16 @@
 import hashlib
 import hmac
 import os
+import session_security
 from rate_limiting import rate_limit
 from flask import jsonify, request, session
 from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
 from password_security import validate_password
 from password_recovery import password_recovery_bp
+from google_auth import google_auth_bp
+from account_settings import account_settings_bp
+from login_otp import deliver_login_code, validate_login_code
 
 from config import app, db
 import models  # Load all models for SQLAlchemy and migrations
@@ -56,6 +60,8 @@ app.register_blueprint(matches_bp)
 app.register_blueprint(dashboard_bp)
 app.register_blueprint(claims_bp)
 app.register_blueprint(password_recovery_bp)
+app.register_blueprint(google_auth_bp)
+app.register_blueprint(account_settings_bp)
 
 import item_routes
 
@@ -126,12 +132,6 @@ def register():
         return jsonify({
             "error": "Enter a valid email address."
         }), 400
-
-    password_valid, password_message = validate_password(
-    password,
-    username,
-    email
-)
 
     password_valid, password_message = validate_password(
         password,
@@ -326,14 +326,59 @@ def login():
             "email": user.email,
         }), 403
 
+    # Password alone never grants an authenticated session.
+    # Clear any previous login and create only a short-lived pending challenge.
     session.clear()
+    success, message = deliver_login_code(user)
+    if not success:
+        return jsonify({"error": message}), 503
+    session["pending_2fa_user_id"] = user.id
+    session["pending_2fa_until"] = int(__import__("time").time()) + 300
+    return jsonify({"two_factor_required": True, "message": message}), 200
+
+
+@app.post("/api/login/verify-otp")
+@rate_limit("login_verify_otp", "code")
+def complete_login_otp():
+    import time
+    from models import LoginOTP
+    pending_id = session.get("pending_2fa_user_id")
+    deadline = session.get("pending_2fa_until", 0)
+    if not pending_id or time.time() >= deadline:
+        session.clear()
+        return jsonify({"error": "Your sign-in challenge has expired. Please log in again."}), 401
+    user = db.session.get(User, pending_id)
+    if user is None or user.email_verified_at is None:
+        session.clear()
+        return jsonify({"error": "Please sign in again."}), 401
+    payload = get_json_data() or {}
+    success, message = validate_login_code(user, payload.get("code"))
+    if not success:
+        return jsonify({"error": message}), 400
+    session.clear()
+    session.permanent = True
     session["user_id"] = user.id
     session["auth_stamp"] = authentication_stamp(user)
+    return jsonify({"message": "Login successful.", "user": user.to_dict()}), 200
 
-    return jsonify({
-        "message": "Login successful.",
-        "user": user.to_dict(),
-    }), 200
+
+@app.post("/api/login/resend-otp")
+@rate_limit("login_resend_otp", "email")
+def resend_login_otp():
+    import time
+    pending_id = session.get("pending_2fa_user_id")
+    if not pending_id or time.time() >= session.get("pending_2fa_until", 0):
+        session.clear()
+        return jsonify({"error": "Sign-in expired. Please log in again."}), 401
+    user = db.session.get(User, pending_id)
+    if user is None or user.email_verified_at is None:
+        session.clear()
+        return jsonify({"error": "Please log in again."}), 401
+    success, message = deliver_login_code(user, resend=True)
+    if not success:
+        return jsonify({"error": message}), 429 if "wait" in message.lower() else 503
+    session["pending_2fa_until"] = int(time.time()) + 300
+    return jsonify({"message": message}), 200
 
 
 @app.route("/api/logout", methods=["POST"])

@@ -55,3 +55,18 @@ def send_password_reset_email(recipient, reset_link):
             "The FoundIt Team"
         ),
     })
+
+
+def send_login_otp_email(recipient, code):
+    """Deliver a temporary code for password-based login."""
+    resend.api_key = os.environ["RESEND_API_KEY"]
+    return resend.Emails.send({
+        "from": os.getenv("MAIL_FROM", "FoundIt <onboarding@resend.dev>"),
+        "to": [recipient],
+        "subject": "Your FoundIt sign-in code",
+        "text": (
+            "Your FoundIt sign-in code is: " + code + "\n\n"
+            "This code expires in 5 minutes. If you did not attempt "
+            "to sign in, please change your password.\n\nThe FoundIt Team"
+        ),
+    })

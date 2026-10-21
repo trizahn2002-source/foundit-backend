@@ -16,6 +16,7 @@ class User(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
     email_verified_at = db.Column(db.DateTime, nullable=True)
+    display_name = db.Column(db.String(80), nullable=True)
     created_at = db.Column(
         db.DateTime,
         nullable=False,
@@ -35,6 +36,7 @@ class User(db.Model):
         return {
             "id": self.id,
             "username": self.username,
+            "display_name": self.display_name,
             "email": self.email,
             "created_at": (
                 self.created_at.isoformat()
@@ -314,3 +316,29 @@ class PasswordResetToken(db.Model):
 
     def __repr__(self):
         return f"<PasswordResetToken user={self.user_id}>"
+
+
+# ---------- Login Two-Step Verification (FoundIt) ----------
+
+class LoginOTP(db.Model):
+    __tablename__ = "login_otps"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    code_hash = db.Column(db.String(64), nullable=False)
+    expires_at = db.Column(db.DateTime, nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, server_default=db.func.now())
+    attempts = db.Column(db.Integer, nullable=False, default=0)
+    user = db.relationship("User", backref=db.backref("login_otp", uselist=False, cascade="all, delete-orphan"))
+
+
+# ---------- Google Sign-In (FoundIt) ----------
+
+class GoogleIdentity(db.Model):
+    __tablename__ = "google_identities"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    google_sub = db.Column(db.String(255), nullable=False, unique=True)
+    created_at = db.Column(db.DateTime, nullable=False, server_default=db.func.now())
+    user = db.relationship("User", backref=db.backref("google_identity", uselist=False, cascade="all, delete-orphan"))
