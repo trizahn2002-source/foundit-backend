@@ -41,7 +41,7 @@ def validate_contact(method, detail):
 
 def claim_to_json(claim):
     data = claim.to_dict()
-    data["claimant"] = claim.user.username if claim.user else None
+    data["claimant"] = ((claim.user.display_name or claim.user.username) if claim.user else None)
 
     viewer_id = current_user_id()
 
@@ -146,7 +146,7 @@ def action_required_claims():
     claims = []
     for claim in relevant_claims:
         data = claim.to_dict()
-        data["claimant"] = claim.user.username if claim.user else None
+        data["claimant"] = ((claim.user.display_name or claim.user.username) if claim.user else None)
         claims.append(data)
 
     return jsonify({"claims": claims}), 200

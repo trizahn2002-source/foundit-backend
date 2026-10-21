@@ -24,15 +24,17 @@ def create_tip(item_id):
     if not claim:
         return jsonify({"error": "You can tip once your claim is approved."}), 403
 
-    data = request.get_json() or {}
+    data = request.get_json(silent=True) or {}
+    if not isinstance(data, dict):
+        return jsonify({"error": "Invalid request body."}), 400
     phone = data.get("phone")
     try:
         amount = int(data.get("amount", 0))
     except (TypeError, ValueError):
         amount = 0
-    if amount < 1:
+    if amount < 1 or amount > 100000:
         return jsonify({"error": "Enter an amount of at least KSh 1."}), 400
-    if not phone:
+    if not isinstance(phone, str) or not phone.strip():
         return jsonify({"error": "Enter your M-Pesa phone number."}), 400
 
     try:
@@ -59,14 +61,16 @@ def create_tip(item_id):
 
 @tips_bp.get("/tips/<int:tip_id>/status")
 def tip_status(tip_id):
+    user_id = session.get("user_id")
+    if user_id is None:
+        return jsonify({"error": "Please log in."}), 401
     tip = db.session.get(Tip, tip_id)
-    if not tip:
+    if not tip or user_id not in (tip.tipper_id, tip.finder_id):
         return jsonify({"error": "Tip not found."}), 404
 
     if tip.status == "pending" and tip.checkout_request_id:
         try:
             result = check_stk_status(tip.checkout_request_id)
-            print("MPESA STATUS:", result)
             code = str(result.get("ResultCode", ""))
             if code == "0":
                 tip.status = "paid"
