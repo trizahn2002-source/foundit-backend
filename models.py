@@ -184,4 +184,28 @@ class Claim(db.Model):
     def __repr__(self):
         return f"<Claim {self.id} user={self.user_id} item={self.item_id} {self.status}>"
 
+class Tip(db.Model):
+    __tablename__ = "tips"
+
+    id = db.Column(db.Integer, primary_key=True)
+    amount = db.Column(db.Integer, nullable=False)
+    phone = db.Column(db.String(15), nullable=False)
+    status = db.Column(db.String(20), default="pending")  # pending / paid / failed
+    checkout_request_id = db.Column(db.String(100))
+    created_at = db.Column(db.DateTime, server_default=db.func.now())
+
+    item_id = db.Column(db.Integer, db.ForeignKey("items.id"), nullable=False)
+    tipper_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    finder_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "amount": self.amount,
+            "status": self.status,
+            "item_id": self.item_id,
+            "tipper_id": self.tipper_id,
+            "finder_id": self.finder_id,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
     
