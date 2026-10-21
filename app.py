@@ -55,9 +55,11 @@ def validate_existing_session():
 from matches import matches_bp
 from dashboard import dashboard_bp
 from claims import claims_bp
+from tips import tips_bp
 
 app.register_blueprint(matches_bp)
 app.register_blueprint(dashboard_bp)
+app.register_blueprint(tips_bp)
 app.register_blueprint(claims_bp)
 app.register_blueprint(password_recovery_bp)
 app.register_blueprint(google_auth_bp)
@@ -413,6 +415,50 @@ def check_session():
         "logged_in": True,
         "user": user.to_dict(),
     }), 200
+
+
+
+# ---------- User update and delete (Wesley; shared security rules) ----------
+from account_settings import (
+    current_user, fail, update_username_for_user,
+    change_password_for_user, delete_account_for_user,
+)
+
+
+@app.route("/api/users/<int:user_id>", methods=["PUT", "PATCH"])
+@rate_limit("edit_profile")
+def update_user(user_id):
+    user = current_user()
+    if user is None:
+        return fail("Please log in first.", 401)
+    if user.id != user_id:
+        return fail("You can only update your own account.", 403)
+    data = get_json_data()
+    if not data:
+        return fail("Provide a username, password or verified email-change request.", 400)
+    if "email" in data:
+        return fail("Use the verified email-change flow: /api/account/email-change/request.", 400)
+    if "password" in data:
+        if set(data) - {"password", "current_password"}:
+            return fail("Update password separately from other fields.", 400)
+        return change_password_for_user(user, {
+            "current_password": data.get("current_password"),
+            "new_password": data.get("password"),
+        })
+    if set(data) != {"username"}:
+        return fail("Only username updates are supported here.", 400)
+    return update_username_for_user(user, data["username"])
+
+
+@app.route("/api/users/<int:user_id>", methods=["DELETE"])
+@rate_limit("delete_account")
+def delete_user(user_id):
+    user = current_user()
+    if user is None:
+        return fail("Please log in first.", 401)
+    if user.id != user_id:
+        return fail("You can only delete your own account.", 403)
+    return delete_account_for_user(user, get_json_data() or {})
 
 
 if __name__ == "__main__":

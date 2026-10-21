@@ -187,7 +187,7 @@ class Claim(db.Model):
     def __repr__(self):
         return f"<Claim {self.id} user={self.user_id} item={self.item_id} {self.status}>"
 
-    
+
 # ---------- Email Verification ----------
 
 class EmailVerification(db.Model):
@@ -342,3 +342,39 @@ class GoogleIdentity(db.Model):
     google_sub = db.Column(db.String(255), nullable=False, unique=True)
     created_at = db.Column(db.DateTime, nullable=False, server_default=db.func.now())
     user = db.relationship("User", backref=db.backref("google_identity", uselist=False, cascade="all, delete-orphan"))
+
+
+# ---------- M-Pesa Tips (team contribution) ----------
+class Tip(db.Model):
+    __tablename__ = "tips"
+
+    id = db.Column(db.Integer, primary_key=True)
+    amount = db.Column(db.Integer, nullable=False)
+    phone = db.Column(db.String(15), nullable=True)
+    status = db.Column(db.String(20), default="pending")  # pending / paid / failed
+    checkout_request_id = db.Column(db.String(100))
+    created_at = db.Column(db.DateTime, server_default=db.func.now())
+
+    item_id = db.Column(db.Integer, db.ForeignKey("items.id"), nullable=True)
+    tipper_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    finder_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "amount": self.amount,
+            "status": self.status,
+            "item_id": self.item_id,
+            "tipper_id": self.tipper_id,
+            "finder_id": self.finder_id,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+# ---------- Pending verified email changes ----------
+class PendingEmailChange(db.Model):
+    __tablename__ = "pending_email_changes"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    new_email = db.Column(db.String(120), nullable=False)
+    code_hash = db.Column(db.String(64), nullable=False)
+    expires_at = db.Column(db.DateTime, nullable=False)
+    attempts = db.Column(db.Integer, nullable=False, default=0)

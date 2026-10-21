@@ -29,6 +29,8 @@ RATE_LIMIT_POLICIES = {
     "edit_profile": (12, 900),
     "change_password": (5, 3600),
     "delete_account": (5, 3600),
+    "request_email_change": (3, 3600),
+    "confirm_email_change": (5, 900),
     "login_verify_otp": (10, 300),
     "login_resend_otp": (3, 3600),
     "verify_email": (5, 300),
