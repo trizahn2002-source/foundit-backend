@@ -1,3 +1,5 @@
+from sqlalchemy.orm import joinedload
+from pagination import get_page_args, pagination_meta
 from datetime import date
 from sqlalchemy.exc import IntegrityError
 from flask import jsonify, request, session
@@ -103,8 +105,21 @@ def list_items():
     if request.args.get("status"):
         query = query.filter(Item.status == request.args["status"])
 
-    items = query.order_by(Item.created_at.desc()).all()
-    return jsonify([i.to_dict() for i in items]), 200
+    # load category and user in the same query (to_dict reads both)
+    query = query.options(joinedload(Item.category), joinedload(Item.user))
+    # id tie-breaker keeps the page order stable when created_at values match
+    query = query.order_by(Item.created_at.desc(), Item.id.desc())
+
+    
+    if "page" not in request.args:
+        return jsonify([i.to_dict() for i in query.all()]), 200
+
+    page, per_page = get_page_args()
+    page_result = query.paginate(page=page, per_page=per_page, error_out=False)
+    return jsonify({
+        "items": [i.to_dict() for i in page_result.items],
+        "pagination": pagination_meta(page_result),
+    }), 200
 
 CATEGORY_NAME_MAX = 50  # the categories.name column holds 50 characters
 
