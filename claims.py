@@ -4,6 +4,8 @@ from sqlalchemy.exc import IntegrityError
 
 from config import db
 from models import Claim, Item
+from sqlalchemy.orm import joinedload
+from pagination import get_page_args, pagination_meta
 
 claims_bp = Blueprint("claims", __name__)
 
@@ -111,12 +113,19 @@ def list_item_claims(item_id):
     if item.user_id != user_id:
         query = query.filter_by(user_id=user_id)
 
-    claims = query.order_by(Claim.created_at.desc()).all()
+    page, per_page = get_page_args(default_per_page=20)
+    page_result = (
+        query
+        .options(joinedload(Claim.user), joinedload(Claim.item))
+        .order_by(Claim.created_at.desc(), Claim.id.desc())
+        .paginate(page=page, per_page=per_page, error_out=False)
+    )
     return jsonify({
         "item_id": item_id,
         "is_owner": item.user_id == user_id,
-        "count": len(claims),
-        "claims": [claim_to_json(c) for c in claims],
+        "count": page_result.total,
+        "claims": [claim_to_json(c) for c in page_result.items],
+        "pagination": pagination_meta(page_result),
     }), 200
 @claims_bp.get("/api/claims/action-required")
 def action_required_claims():
@@ -126,9 +135,11 @@ def action_required_claims():
     if not user_id:
         return jsonify({"error": "Login required"}), 401
 
-    relevant_claims = (
+    page, per_page = get_page_args(default_per_page=20)
+    page_result = (
         Claim.query
         .join(Item, Claim.item_id == Item.id)
+        .options(joinedload(Claim.user), joinedload(Claim.item))
         .filter(
             Item.user_id == user_id,
             or_(
@@ -136,9 +147,10 @@ def action_required_claims():
                 and_(Claim.status == "approved", Item.status == "claimed"),
             ),
         )
-        .order_by(Claim.created_at.desc())
-        .all()
+        .order_by(Claim.created_at.desc(), Claim.id.desc())
+        .paginate(page=page, per_page=per_page, error_out=False)
     )
+    relevant_claims = page_result.items
 
     # Deliberately omit private contact fields from this dashboard endpoint.
     # Contact details remain accessible through the permission-controlled
@@ -149,7 +161,10 @@ def action_required_claims():
         data["claimant"] = ((claim.user.display_name or claim.user.username) if claim.user else None)
         claims.append(data)
 
-    return jsonify({"claims": claims}), 200
+    return jsonify({
+        "claims": claims,
+        "pagination": pagination_meta(page_result),
+    }), 200
 
 
 @claims_bp.patch("/api/claims/<int:claim_id>")
