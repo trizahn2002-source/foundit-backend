@@ -61,4 +61,5 @@ migrate = Migrate(app, db)
 bcrypt = Bcrypt(app)
 
 # Let the React app (Vite on port 5173) send cookies to Flask
-CORS(app, supports_credentials=True, origins=["http://localhost:5173"])
+frontend_urls = os.getenv("FRONTEND_URL", "http://localhost:5173").split(",")
+CORS(app, supports_credentials=True, origins=frontend_urls)
