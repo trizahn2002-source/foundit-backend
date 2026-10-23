@@ -20,6 +20,7 @@ psycopg-binary==3.3.6
 psycopg2-binary==2.9.13
 python-dotenv==1.2.4
 requests==2.34.2
+resend==2.50.0
 SQLAlchemy==2.1.5
 typing_extensions==4.16.0
 urllib3==2.8.0
