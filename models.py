@@ -47,6 +47,16 @@ class User(db.Model):
     def __repr__(self):
         return f"<User {self.id}: {self.username}>"
 
+def public_name(user):
+    """Human-readable name for display. Never returns a generated Google ID."""
+    if user is None:
+        return None
+    if user.display_name and user.display_name.strip():
+        return user.display_name.strip()
+    if user.username and not user.username.startswith("google_"):
+        return user.username
+    return None
+
 # ---------- categories and items (Samuel) ----------
 class Category(db.Model):
     __tablename__ = "categories"
@@ -118,7 +128,7 @@ class Item(db.Model):
             "category_id": self.category_id,
             "category": self.category.name if self.category else None,
             "user_id": self.user_id,
-            "reporter_username": self.user.username if self.user else None,
+            "reporter_username": public_name(self.user),
         }
 
     def __repr__(self):
