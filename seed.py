@@ -96,7 +96,7 @@ with app.app_context():
             Item(
                 title="Samsung Phone",
                 type="lost",
-                category=categories["Electronics"],
+                category=categories["Phones"],
                 user_id=users["grace"].id,
                 description="Samsung Galaxy A54 in a blue case.",
                 location="Kenyatta Avenue, Nairobi CBD",
@@ -107,7 +107,7 @@ with app.app_context():
             Item(
                 title="Phone in Blue Case",
                 type="found",
-                category=categories["Electronics"],
+                category=categories["Phones"],
                 user_id=users["amina"].id,
                 description="Samsung phone in a blue case found on a matatu bench.",
                 location="Archives Stage, Nairobi CBD",
