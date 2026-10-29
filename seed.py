@@ -36,7 +36,12 @@ with app.app_context():
         "Documents",
         "Keys",
         "Clothing",
-        "Other",
+        "Wallets",
+        "Phones",
+        "Laptops",
+        "Identification Documents",
+        "Accessories",
+        "Other"
     ]
 
     categories = {}
