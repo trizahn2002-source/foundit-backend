@@ -4,141 +4,107 @@
 
 FoundIt Backend is a RESTful API built with Flask for a lost-and-found application.
 
-The API allows users to report lost and found items, view item reports, submit claims for found items, view their own reports and claims, and receive possible matches between lost and found reports.
+It lets users register and log in securely, report lost and found items, submit and review ownership claims, and receive possible matches between lost and found reports. It also sends emails for account verification and claim updates.
 
-Possible matches are generated using details such as item category, shared keywords, report dates and location distance.
-
-The application uses PostgreSQL for data storage, SQLAlchemy for database management and Flask-Migrate for database migrations.
+The API uses PostgreSQL, SQLAlchemy and Flask-Migrate. The React frontend is in the [FoundIt frontend](https://github.com/trizahn2002-source/foundit) repository.
 
 ## Features
 
-- Create and manage lost and found item reports
-- Organize items by category
-- Submit claims for found items
-- View claims
-- View items reported by a user
-- View claims submitted by a user
+- Register with email verification, log in with a one-time code, or sign in with Google
+- Password recovery and account settings (display name, password, email change, account deletion)
+- Create and manage lost and found reports, organized by category
+- Search and filter items by type, category and status, with pagination
 - Suggest possible matches between lost and found items
-- Match items using category, keywords, report dates and location distance
-- Support item statuses such as active, claimed and resolved
-- Support claim statuses such as pending, approved and rejected
-- PostgreSQL database integration
-- Database migrations using Flask-Migrate
-- Seed data for development
-- JSON error responses and appropriate HTTP status codes
+- Claims: finders approve or reject them, and approving one rejects the other pending claims
+- Email notifications when a claim is received, approved or rejected
+- Optional tips for finders through the M-Pesa sandbox
+- Rate limiting on sensitive authentication actions
+- Database migrations and seed data for development
 
 ## Technologies Used
 
-- Python
-- Flask
-- Flask-SQLAlchemy
-- SQLAlchemy
-- Flask-Migrate
-- Flask-Bcrypt
-- Flask-CORS
-- PostgreSQL
-- Psycopg2
-- Python-dotenv
-- Pipenv
+- Python, Flask, Flask-SQLAlchemy, Flask-Migrate, Flask-Bcrypt, Flask-CORS
+- PostgreSQL, Psycopg2
+- Python-dotenv, Requests
+- Google Auth (Google sign-in) and Gmail API (email delivery)
+- M-Pesa (sandbox)
+- Pipenv, Render (hosting)
 
 ## How to Run the Project
 
-1. Clone the repository.
+1. Clone the repository and go into the folder.
 
    ```bash
-    git clone https://github.com/trizahn2002-source/foundit-backend.git
-   ```
-
-2. Navigate into the project folder.
-
-   ```bash
+   git clone https://github.com/trizahn2002-source/foundit-backend.git
    cd foundit-backend
    ```
 
-3. Install the project dependencies.
+2. Install the dependencies.
 
    ```bash
    pipenv install
    ```
 
-4. Create a PostgreSQL database and database user.
-
-5. Create a `.env` file using `.env.example` as a guide.
+3. Create a PostgreSQL database and user, then create a `.env` file using `.env.example` as a guide.
 
    ```env
    DATABASE_URL=postgresql+psycopg2://foundit_user:your_password@localhost:5432/foundit_db
    SECRET_KEY=your_secret_key
    ```
 
-6. Make sure PostgreSQL is running.
+4. Make sure PostgreSQL is running.
 
    ```bash
    sudo service postgresql start
    ```
 
-7. Apply the existing database migrations.
+5. Apply the database migrations and add seed data.
 
    ```bash
    pipenv run flask --app app db upgrade
-   ```
-
-8. Add seed data.
-
-   ```bash
    pipenv run python seed.py
    ```
 
-9. Start the Flask server.
+6. Start the Flask server. The API will be available at `http://localhost:5555`.
 
    ```bash
    pipenv run python app.py
    ```
 
-10. The API will be available at:
+7. Start the frontend from the [frontend repository](https://github.com/trizahn2002-source/foundit) with `npm run dev`. It cannot load data unless this server is running.
 
-   ```text
-   http://localhost:5555
-   ```
+## Environment Variables
+
+Copy `.env.example` to `.env` and fill in your own values. Never commit the `.env` file.
+
+| Variable | Purpose |
+|---|---|
+| `DATABASE_URL` | PostgreSQL connection string |
+| `SECRET_KEY` | Secret used to sign sessions |
+| `FRONTEND_URL` | Frontend address, used for links in emails |
+| `SESSION_COOKIE_SECURE` | Set to `true` when served over HTTPS |
+| `GOOGLE_CLIENT_ID` | Google OAuth client ID for Google sign-in |
+| `EMAIL_PROVIDER` | Set to `gmail` |
+| `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`, `GMAIL_SENDER_EMAIL` | Gmail API credentials |
+| `OTP_TEST_MODE`, `OTP_TEST_EMAIL` | When test mode is on, all emails go to the test address |
+| `EMAIL_CHANGE_SMTP_*`, `EMAIL_CHANGE_FROM` | SMTP settings for email-change codes |
+| `MPESA_*` | M-Pesa sandbox settings for tips |
 
 ## API Endpoints
 
-### API
-
-- `GET /api` — Check that the FoundIt API is running
-
-### Categories
-
-- `GET /api/categories` — View all item categories
-
-### Items
-
-- `GET /api/items` — View all lost and found item reports
-- `GET /api/items/<item_id>` — View a specific item
-- `POST /api/items` — Create a new lost or found item report
-- `PATCH /api/items/<item_id>` — Update an existing item report
-- `DELETE /api/items/<item_id>` — Delete an item report
-
-### Possible Matches
-
-- `GET /api/items/<item_id>/matches` — View possible lost/found matches for an item
-
-### Claims
-
-- `POST /api/items/<item_id>/claims` — Submit a claim for an item
-- `GET /api/items/<item_id>/claims` — View claims submitted for a specific item
-- `GET /api/claims/mine` — View claims belonging to the current user
-- `GET /api/claims/<claim_id>` — View a specific claim
-- `PATCH /api/claims/<claim_id>` — Update a claim
-- `DELETE /api/claims/<claim_id>` — Delete a claim
-
-### Dashboard
-
-- `GET /api/users/<user_id>/items` — View items reported by a user
-- `GET /api/users/<user_id>/claims` — View claims submitted by a user
+- **API:** `GET /api` — check that the API is running
+- **Authentication:** `POST /api/register`, `POST /api/verify-email`, `POST /api/resend-verification`, `POST /api/login`, `POST /api/login/verify-otp`, `POST /api/login/resend-otp`, `POST /api/auth/google`, `POST /api/logout`, `GET /api/check_session`, `GET /api/csrf-token`
+- **Password recovery:** `POST /api/forgot-password`, `POST /api/validate-reset-token`, `POST /api/reset-password`
+- **Account:** `GET /api/account`, `PATCH /api/account/display-name`, `POST /api/account/change-password`, `POST /api/account/email-change/request`, `POST /api/account/email-change/confirm`, `POST /api/account/delete`
+- **Categories:** `GET` and `POST /api/categories`, `PATCH` and `DELETE /api/categories/<category_id>`
+- **Items:** `GET` and `POST /api/items` (list supports search, type, category, status and pagination), `GET`, `PATCH` and `DELETE /api/items/<item_id>`
+- **Possible matches:** `GET /api/items/<item_id>/matches`
+- **Claims:** `POST` and `GET /api/items/<item_id>/claims`, `GET /api/claims/action-required`, `PATCH /api/claims/<claim_id>` (approve or reject)
+- **Dashboard:** `GET /api/users/<user_id>/items`, `GET /api/users/<user_id>/claims`
+- **Users:** `PATCH` or `PUT` and `DELETE /api/users/<user_id>`
+- **Tips:** `POST /api/items/<item_id>/tips`, `GET /api/tips/<tip_id>/status`
 
 ## Matching Logic
-
-The possible matches endpoint compares lost and found item reports using a combination of rules.
 
 A possible match must:
 
@@ -148,76 +114,23 @@ A possible match must:
 - Belong to a different user
 - Share at least two meaningful keywords
 
-Reports that are more than seven days apart are currently excluded.
-
-Location is used to improve the match score rather than automatically excluding items that are farther apart.
-
-Matches are scored and returned with stronger matches appearing first.
-
-The matching rules may be adjusted in future after testing with more sample data.
-
-## Authentication and Access Control
-
-Some backend routes are already structured to use session-based authentication.
-
-However, the complete authentication implementation has not yet been integrated into the current backend.
-
-The dashboard endpoints currently use the `user_id` supplied in the route for development and testing.
-
-Once authentication is fully integrated, these endpoints should use the logged-in user's identity instead of relying on a user ID supplied in the URL.
+Reports more than seven days apart are excluded. Location improves the match score but does not exclude items. Stronger matches are returned first.
 
 ## Database Models
 
-### User
-
-Stores user account information including:
-
-- Username
-- Email
-- Password hash
-- Creation date
-
-### Category
-
-Stores the categories used to organize lost and found items.
-
-### Item
-
-Stores lost and found item reports including:
-
-- Title
-- Description
-- Lost or found type
-- Status
-- Location
-- Latitude
-- Longitude
-- Report date
-- Image URL
-- Category
-- User
-- Creation date
-
-### Claim
-
-Stores claims submitted for found items including:
-
-- Claim message
-- Claim status
-- User
-- Item
-- Creation date
+- **User:** username, display name, email, password hash, email verification date
+- **Category:** name
+- **Item:** title, description, type (lost or found), status (active, claimed or resolved), location, coordinates, date, image, category, owner
+- **Claim:** message, status (pending, approved or rejected), optional contact details shared by the finder, user, item. A user can claim an item only once.
+- **Tip:** amount, status, item, tipper, finder
+- **Authentication models:** email verification codes, login one-time codes, password reset tokens, Google identities, pending email changes and rate limit counters
 
 ## Future Improvements
 
-- Complete authentication integration
-- Use authenticated users for dashboard endpoints
-- Improve authorization across protected routes
+- Replace the sandbox M-Pesa tips with live payments
+- Notify users when new possible matches are found
 - Tune matching rules using more sample data
-- Improve match scoring
-- Complete frontend and backend integration across all features
 - Add more automated tests
-- Deploy the application
 
 ## Collaborators
 

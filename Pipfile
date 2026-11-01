@@ -13,6 +13,7 @@ psycopg2-binary = "*"
 python-dotenv = "*"
 psycopg = {extras = ["binary"], version = "*"}
 requests = "*"
+google-auth = "*"
 
 [dev-packages]
 
