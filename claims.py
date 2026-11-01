@@ -1,11 +1,18 @@
+import os
 import re
-from flask import Blueprint, jsonify, request, session
+from flask import Blueprint, current_app, jsonify, request, session
 from sqlalchemy.exc import IntegrityError
 
 from config import db
 from models import Claim, Item, public_name
 from sqlalchemy.orm import joinedload
 from pagination import get_page_args, pagination_meta
+from email_sender import (
+    send_in_background,
+    send_claim_received_email,
+    send_claim_approved_email,
+    send_claim_rejected_email,
+)
 
 claims_bp = Blueprint("claims", __name__)
 
@@ -39,6 +46,27 @@ def validate_contact(method, detail):
 
     return None
 
+
+
+def item_link(item_id):
+    base = os.environ.get("FRONTEND_URL", "http://localhost:5173").rstrip("/")
+    return f"{base}/items/{item_id}"
+
+
+def notify(send_function, user, item):
+    """
+    Email a user about a claim. Never raises: a mail problem must not
+    change the result of saving or deciding a claim.
+    """
+    try:
+        send_in_background(
+            send_function,
+            user.email,
+            item.title,
+            item_link(item.id),
+        )
+    except Exception:
+        current_app.logger.exception("Claim notification failed")
 
 
 def claim_to_json(claim):
@@ -95,6 +123,9 @@ def create_claim(item_id):
     except IntegrityError:
         db.session.rollback()
         return jsonify({"error": "You have already claimed this item"}), 409
+
+    # Tell the finder. Link only: no claimant details are emailed.
+    notify(send_claim_received_email, item.user, item)
 
     return jsonify(claim_to_json(claim)), 201
 
@@ -195,6 +226,8 @@ def decide_claim(claim_id):
             "error": f"Claim is already {claim.status}"
         }), 400
 
+    auto_rejected_users = []
+
     if status == "approved":
         # Validate contact details before making any changes.
         contact_method = data.get("contact_method")
@@ -259,12 +292,22 @@ def decide_claim(claim_id):
         for other in item.claims:
             if other.id != claim.id and other.status == "pending":
                 other.status = "rejected"
+                auto_rejected_users.append(other.user)
 
     else:
         # Rejection does not require contact information.
         claim.status = "rejected"
 
     db.session.commit()
+
+    # Notify claimants after the decision is saved (links only, never
+    # the finder's private contact details).
+    if status == "approved":
+        notify(send_claim_approved_email, claim.user, claim.item)
+        for rejected_user in auto_rejected_users:
+            notify(send_claim_rejected_email, rejected_user, claim.item)
+    else:
+        notify(send_claim_rejected_email, claim.user, claim.item)
 
     return jsonify({
         "claim": claim_to_json(claim),
