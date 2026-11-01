@@ -1,6 +1,9 @@
 import os
 import base64
 from email.message import EmailMessage
+import logging
+import threading
+logger = logging.getLogger(__name__)
 
 import requests
 import resend
@@ -116,6 +119,91 @@ def send_login_otp_email(recipient, code):
             "This code expires in 5 minutes. "
             "If you did not attempt to sign in, "
             "please change your password.\n\n"
+            "The FoundIt Team"
+        ),
+    )
+
+def _notification_allowed(recipient):
+    """Same Resend testing restriction used by the other email flows."""
+
+    test_mode = os.getenv("OTP_TEST_MODE", "true").lower() == "true"
+
+    if not test_mode:
+        return True
+
+    allowed = os.getenv("OTP_TEST_EMAIL", "").strip().lower()
+
+    return bool(allowed) and (recipient or "").strip().lower() == allowed
+
+
+def send_in_background(send_function, recipient, *args):
+    """
+    Send a notification without slowing down or breaking the request.
+
+    Pass plain values only (no database objects), because this runs in
+    another thread. Failures are logged and never raised.
+    """
+
+    if not recipient or not _notification_allowed(recipient):
+        logger.info(
+            "Skipped %s: recipient not allowed or missing",
+            send_function.__name__,
+        )
+        return
+
+    def run():
+        try:
+            send_function(recipient, *args)
+        except Exception:
+            logger.exception("Could not send %s", send_function.__name__)
+
+    threading.Thread(target=run, daemon=True).start()
+
+
+def send_claim_received_email(recipient, item_title, item_link):
+    """Tell the item owner that someone submitted a claim."""
+
+    return _send_email(
+        recipient,
+        "Someone claimed your item on FoundIt",
+        (
+            "Hello,\n\n"
+            f'A new claim was submitted for your item "{item_title}".\n\n'
+            "Log in and open the item to review it:\n\n"
+            f"{item_link}\n\n"
+            "Only you can approve or reject it.\n\n"
+            "The FoundIt Team"
+        ),
+    )
+
+
+def send_claim_approved_email(recipient, item_title, item_link):
+    """Tell a claimant that their claim was approved."""
+
+    return _send_email(
+        recipient,
+        "Your FoundIt claim was approved",
+        (
+            "Good news!\n\n"
+            f'Your claim for "{item_title}" was approved.\n\n'
+            "Log in and open the item to see how to contact the finder:\n\n"
+            f"{item_link}\n\n"
+            "The FoundIt Team"
+        ),
+    )
+
+
+def send_claim_rejected_email(recipient, item_title, item_link):
+    """Tell a claimant that their claim was not approved."""
+
+    return _send_email(
+        recipient,
+        "Update on your FoundIt claim",
+        (
+            "Hello,\n\n"
+            f'Your claim for "{item_title}" was not approved.\n\n'
+            "You can view the item here:\n\n"
+            f"{item_link}\n\n"
             "The FoundIt Team"
         ),
     )
